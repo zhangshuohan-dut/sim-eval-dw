@@ -72,7 +72,7 @@
 
 <header>
   <h1>仿真评测数据仓库 · 分析报告</h1>
-  <p class="sub">把 3000 局算法仿真日志做成可复算的指标口径：四层分层建模、9 项数据质量断言、分位数与配对实验分析。</p>
+  <p class="sub">把 3000 局算法仿真日志做成可复算的指标口径：四层分层建模、9 项数据质量断言、分位数与配对对照分析。</p>
   <div class="meta" id="meta"></div>
 </header>
 
@@ -309,8 +309,8 @@ document.getElementById('pairNote').innerHTML =
 document.getElementById('findings').innerHTML = [
   `<b>移动是唯一真正的瓶颈。</b>问题三移动占 ${D.stage.find(s=>s.problem_cd==='Q3'&&s.stage_name==='移动')?.stage_ratio_pct}%、问题四占 ${D.stage.find(s=>s.problem_cd==='Q4'&&s.stage_name==='移动')?.stage_ratio_pct}%，清除只占 ${D.stage.find(s=>s.problem_cd==='Q3'&&s.stage_name==='定位清除')?.stage_ratio_pct}% 与 ${D.stage.find(s=>s.problem_cd==='Q4'&&s.stage_name==='定位清除')?.stage_ratio_pct}%。优化路径的收益远大于抠测量精度。`,
   `<b>规模效应显著。</b>问题三单源耗时从 10 源的 297.8 秒降到 16 源的 208.8 秒，降幅 29.9%，来源是固定巡查成本被摊薄，而不是算法随规模变强。`,
-  `<b>均值不够，必须看尾部。</b>问题三单局总耗时 P50 ${fmt(q3s.p50_total_sec,0)} 秒、P90 ${fmt(q3s.p90_total_sec,0)} 秒、P99 ${fmt(q3s.p99_total_sec,0)} 秒，变异系数 ${fmt(q3s.cv_total*100,2)}%——波动主要来自各局源数不同，不是算法随机性。`,
-  `<b>配对实验纠正了一个直觉。</b>把「缩小一次定位的最坏直径」当成「缩短任务耗时」，在数据上不成立：闭式最优点让定位更准，但整体更慢。结论必须分开表述。`,
+  `<b>均值不够，必须看尾部。</b>问题三单局总耗时 P50 ${fmt(q3s.p50_total_sec,0)} 秒、P90 ${fmt(q3s.p90_total_sec,0)} 秒、P99 ${fmt(q3s.p99_total_sec,0)} 秒，整局变异系数 ${fmt(q3s.cv_total*100,2)}%（每源口径为 13.91%）——波动主要来自各局源数不同，不是算法随机性。`,
+  `<b>覆盖策略的代价是能量出来的。</b>19 m 矩形覆盖相对 20 m 六角点阵每源多耗 ${fmt(L.avg_src_delta_sec,3)} 秒（+${fmt(L.per_src_lift_pct,3)}%），换来 1 米清除余量；两种策略都 ${int(L.pair_cnt)}/${int(L.pair_cnt)} 全部清除。这不是算法快慢，是买容错的钱。`,
   `<b>${D.dq.length} 项质量断言全通过。</b>四项动作耗时之和与总时间 0 处对不上，清除数未越界，run_id 唯一，${D.dq.length} 项检查平均通过率 ${fmt(D.scorecard.avg_pass_rate*100,2)}%。`
 ].map(x=>`<li>${x}</li>`).join('');
 
