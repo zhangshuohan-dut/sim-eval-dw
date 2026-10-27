@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>仿真评测数据仓库 · 分析报告</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  :root{
+    --ink:#16202e; --ink-2:#42506a; --muted:#6b7a90; --line:#e3e8ef;
+    --bg:#f6f8fb; --card:#ffffff; --accent:#1f4e79; --accent-2:#c8102e;
+    --ok:#1a7f5a; --warn:#b8860b;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue","Microsoft YaHei",sans-serif;
+    font-size:14px; line-height:1.7; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px 72px;}
+  header{padding:56px 0 28px;border-bottom:1px solid var(--line);}
+  h1{font-size:30px;line-height:1.3;margin:0 0 10px;letter-spacing:-.2px;}
+  .sub{color:var(--ink-2);font-size:15px;max-width:760px;}
+  .meta{margin-top:18px;color:var(--muted);font-size:12.5px;display:flex;gap:18px;flex-wrap:wrap;}
+  .meta span::before{content:"·";margin-right:8px;color:#c3ccd9;}
+  .meta span:first-child::before{content:"";}
+  h2{font-size:19px;margin:52px 0 6px;padding-left:11px;border-left:3px solid var(--accent);}
+  h2 .en{font-size:11px;color:var(--muted);font-weight:400;letter-spacing:.6px;margin-left:8px;}
+  .lead{color:var(--ink-2);margin:0 0 22px;max-width:820px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:22px 24px;}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:26px;}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px;}
+  .kpi .label{font-size:12px;color:var(--muted);letter-spacing:.3px;}
+  .kpi .value{font-size:26px;font-weight:700;margin-top:6px;letter-spacing:-.5px;font-variant-numeric:tabular-nums;}
+  .kpi .value small{font-size:13px;font-weight:500;color:var(--ink-2);margin-left:3px;}
+  .kpi .note{font-size:11.5px;color:var(--muted);margin-top:4px;}
+  .chart{width:100%;height:340px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--line);}
+  th{color:var(--muted);font-weight:500;font-size:12px;background:#fbfcfe;}
+  td.num{text-align:right;font-variant-numeric:tabular-nums;}
+  tr:last-child td{border-bottom:none;}
+  .tag{display:inline-block;padding:1px 8px;border-radius:20px;font-size:11.5px;font-weight:600;}
+  .tag.pass{background:#e8f5ef;color:var(--ok);}
+  .tag.warn{background:#fdf4e3;color:var(--warn);}
+  .tag.fail{background:#fdecee;color:var(--accent-2);}
+  .layers{display:flex;flex-direction:column;gap:9px;margin:6px 0 4px;}
+  .layer{display:flex;align-items:center;gap:16px;background:#fbfcfe;border:1px solid var(--line);border-radius:8px;padding:13px 16px;}
+  .layer .code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;font-weight:700;color:#fff;background:var(--accent);border-radius:5px;padding:3px 9px;min-width:52px;text-align:center;}
+  .layer .body{flex:1;}
+  .layer .name{font-weight:600;font-size:13.5px;}
+  .layer .desc{font-size:12px;color:var(--muted);}
+  .layer .tables{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:var(--accent);text-align:right;max-width:320px;}
+  ul.findings{margin:0;padding-left:20px;}
+  ul.findings li{margin-bottom:9px;}
+  .callout{background:#f0f5fa;border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:14px 18px;margin:18px 0;font-size:13.5px;color:var(--ink-2);}
+  .callout b{color:var(--ink);}
+  .limit{background:#fdf8f0;border-left:3px solid var(--warn);border-radius:0 8px 8px 0;padding:14px 18px;font-size:13.5px;color:var(--ink-2);}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#eef2f7;padding:1px 5px;border-radius:4px;font-size:12.5px;}
+  footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  @media (max-width:860px){
+    .kpis{grid-template-columns:1fr 1fr;}
+    .grid2{grid-template-columns:1fr;}
+    .layer .tables{display:none;}
+    h1{font-size:24px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>仿真评测数据仓库 · 分析报告</h1>
+  <p class="sub">把 3000 局算法仿真日志做成可复算的指标口径：四层分层建模、9 项数据质量断言、分位数与配对实验分析。</p>
+  <div class="meta" id="meta"></div>
+</header>
+
+<div class="kpis" id="kpis"></div>
+
+<h2>一、分层架构<span class="en">LAYERED MODEL</span></h2>
+<p class="lead">原始 CSV 只保留在 ODS 层，所有业务口径在 DWD 统一，汇总与指标在 DWS/ADS 固化。任何一张报表的数字都能沿 <code>ADS → DWS → DWD → ODS → CSV 行号</code> 回溯。</p>
+<div class="card">
+  <div class="layers">
+    <div class="layer">
+      <span class="code">ODS</span>
+      <div class="body"><div class="name">原始层 · 原样落地</div><div class="desc">不改列名、不做强转，仅补装载批次与源行号，保证与上游 CSV 逐列可对</div></div>
+      <div class="tables">ods_q3_run_1000 / ods_q4_run_new_1000<br>ods_q4_run_base_1000 / ods_q4_paired_1000</div>
+    </div>
+    <div class="layer">
+      <span class="code">DWD</span>
+      <div class="body"><div class="name">明细层 · 统一粒度</div><div class="desc">把三份逐局日志合并成「一局一行」公共粒度，补齐派生指标与对账字段</div></div>
+      <div class="tables">dwd_task_run / dwd_task_stage_cost<br>dwd_q4_paired</div>
+    </div>
+    <div class="layer">
+      <span class="code">DWS</span>
+      <div class="body"><div class="name">汇总层 · 预聚合</div><div class="desc">分位数、变异系数、阶段占比、规模效应与配对差异一次算好</div></div>
+      <div class="tables">dws_problem_algo_stat / dws_src_bucket_stat<br>dws_stage_mix / dws_cost_model / dws_pair_by_src</div>
+    </div>
+    <div class="layer">
+      <span class="code">ADS</span>
+      <div class="body"><div class="name">应用层 · 直接消费</div><div class="desc">指标卡、算法结论、图表数据源、简历/汇报口径卡</div></div>
+      <div class="tables">ads_kpi_overview / ads_algo_lift<br>ads_resume_facts / ads_algorithm_behavior</div>
+    </div>
+  </div>
+</div>
+
+<h2>二、规模效应：源越多，单源越便宜<span class="en">SCALING</span></h2>
+<p class="lead">同一套策略下把局按源数切开看：总耗时随源数上升，但单源耗时单调下降——说明存在一笔与源数无关的固定开销（哨点巡查、判空验证），源越多摊得越薄。</p>
+<div class="card"><div id="chartScaling" class="chart"></div></div>
+<div class="callout" id="costModelNote"></div>
+
+<h2>三、时间花在哪<span class="en">STAGE MIX</span></h2>
+<p class="lead">把定位清除总时间拆成移动、测量、切频、清除四段。移动是绝对瓶颈，这决定了优化方向应该压在路径而不是测量精度上。</p>
+<div class="grid2">
+  <div class="card"><div id="chartStageQ3" class="chart" style="height:280px"></div></div>
+  <div class="card"><div id="chartStageQ4" class="chart" style="height:280px"></div></div>
+</div>
+
+<h2>四、分布与分位数<span class="en">DISTRIBUTION</span></h2>
+<p class="lead">只报均值会掩盖长尾。这里给出问题三 1000 局的单局总耗时分布，并标注 P50 / P90 / P99——评测里真正该盯的是尾部。</p>
+<div class="card"><div id="chartQ3Hist" class="chart"></div></div>
+
+<h2>五、配对实验：效率到底有没有提升<span class="en">PAIRED TEST</span></h2>
+<p class="lead">新版与基线跑的是同一批种子（750000–750999），因此可以做同场景配对，直接消掉「每局源数不同」带来的方差。</p>
+<div class="grid2">
+  <div class="card"><div id="chartPairHist" class="chart" style="height:300px"></div></div>
+  <div class="card" style="padding-top:16px">
+    <table id="tblPair"></table>
+  </div>
+</div>
+<div class="callout" id="pairNote"></div>
+
+<h2>六、数据质量断言<span class="en">DATA QUALITY</span></h2>
+<p class="lead">「这批数据能不能用」不该靠人工扫表，而应写成可执行断言。9 项检查覆盖完整性、一致性、唯一性、有效性与业务约束，任一 FAIL 即阻断下游出表。</p>
+<div class="card">
+  <table id="tblDq"></table>
+</div>
+<div class="callout" id="dqNote"></div>
+
+<h2>七、结论与局限<span class="en">FINDINGS</span></h2>
+<div class="card">
+  <ul class="findings" id="findings"></ul>
+</div>
+<div class="limit" id="limit"></div>
+
+<footer>
+  <span>仿真评测数据仓库 · SQLite 单机版</span>
+  <span id="footMeta"></span>
+</footer>
+
+</div>
+
+<script src="data.js"></script>
+<script>
+const D = window.DW_DATA;
+const fmt = (v, d = 1) => Number(v).toFixed(d);
+const int = v => Number(v).toLocaleString('zh-CN');
+
+/* ---------- 元信息与 KPI ---------- */
+document.getElementById('meta').innerHTML = `
+  <span>样本 ${int(D.kpi.total_run_cnt)} 局 / ${int(D.kpi.total_src_cnt)} 个源</span>
+  <span>ODS → DWD → DWS → ADS 四层</span>
+  <span>9 项质量断言 · ${D.scorecard.pipeline_status}</span>
+  <span>生成于 ${D.generated_at}</span>`;
+
+const kpiDefs = [
+  ['清除完成率', (D.kpi.overall_clear_ratio * 100).toFixed(2) + '<small>%</small>', `${int(D.kpi.total_cleared_cnt)} / ${int(D.kpi.total_src_cnt)} 个源全部清除`],
+  ['问题三平均单源耗时', fmt(D.kpi.q3_avg_per_src_sec, 1) + '<small>秒/源</small>', `P90 ${fmt(D.kpi.q3_p90_per_src_sec, 1)} 秒/源`],
+  ['问题四平均单源耗时', fmt(D.kpi.q4_avg_per_src_sec, 1) + '<small>秒/源</small>', `P90 ${fmt(D.kpi.q4_p90_per_src_sec, 1)} 秒/源`],
+  ['固定成本项', int(D.kpi.q3_fixed_cost_sec) + '<small>秒</small>', `边际 ${fmt(D.kpi.q3_marginal_sec_per_src, 2)} 秒/源`],
+  ['程序运行峰值', fmt(D.kpi.max_wall_sec, 2) + '<small>秒</small>', `上限 1200 秒，余量 ${fmt(D.kpi.wall_headroom_x, 0)} 倍`],
+  ['稳定性', D.kpi.total_viol_cnt + ' / ' + D.kpi.total_aborted_cnt, '不变量违例 / 异常中止']
+];
+document.getElementById('kpis').innerHTML = kpiDefs.map(([l, v, n]) =>
+  `<div class="kpi"><div class="label">${l}</div><div class="value">${v}</div><div class="note">${n}</div></div>`).join('');
+
+/* ---------- 通用样式 ---------- */
+const AXIS = { axisLine:{lineStyle:{color:'#d6dde7'}}, axisLabel:{color:'#6b7a90', fontSize:11},
+               splitLine:{lineStyle:{color:'#eef2f7'}} };
+
+/* ---------- 图1 规模效应 ---------- */
+const sc = D.scaling;
+const seriesMap = [
+  ['Q3','final_v3','问题三 · final_v3','#1f4e79'],
+  ['Q4','new','问题四 · 新版','#2f8f6f'],
+  ['Q4','baseline','问题四 · 基线','#b7874a']
+];
+const srcList = [...new Set(sc.map(r => r.src_cnt))].sort((a,b)=>a-b);
+const c1 = echarts.init(document.getElementById('chartScaling'));
+c1.setOption({
+  tooltip:{trigger:'axis', valueFormatter:v=>fmt(v,1)+' 秒/源'},
+  legend:{bottom:0, textStyle:{color:'#42506a', fontSize:12}, itemWidth:14, itemHeight:8},
+  grid:{left:56, right:24, top:28, bottom:56},
+  xAxis:{type:'category', data:srcList.map(v=>v+' 源'), ...AXIS, splitLine:{show:false}},
+  yAxis:{type:'value', name:'秒 / 源', nameTextStyle:{color:'#6b7a90', fontSize:11}, ...AXIS},
+  series: seriesMap.map(([p,a,name,color])=>{
+    const rows = sc.filter(r=>r.problem_cd===p && r.algo_cd===a).sort((x,y)=>x.src_cnt-y.src_cnt);
+    return { name, type:'line', smooth:true, symbolSize:6, lineStyle:{width:2.5, color}, itemStyle:{color},
+             data: rows.map(r=>r.avg_per_src_sec) };
+  })
+});
+
+/* ---------- 图2 时间构成 ---------- */
+function stageBar(id, problem){
+  const rows = D.stage.filter(r=>r.problem_cd===problem);
+  const order = ['移动','测量','切频','定位清除'];
+  const colors = {'移动':'#1f4e79','测量':'#4a86b8','切频':'#a8bccf','定位清除':'#c8102e'};
+  const ch = echarts.init(document.getElementById(id));
+  ch.setOption({
+    title:{text: problem==='Q3'?'问题三 · final_v3':'问题四 · 新版', left:0, top:0,
+           textStyle:{fontSize:13, color:'#42506a', fontWeight:600}},
+    tooltip:{trigger:'item', formatter:p=>`${p.name}<br/>${fmt(p.value,2)} 秒（${fmt(p.percent,2)}%）`},
+    legend:{bottom:0, textStyle:{color:'#42506a', fontSize:11.5}, itemWidth:12, itemHeight:8},
+    grid:{left:12, right:12, top:44, bottom:48},
+    series:[{
+      type:'pie', radius:['42%','66%'], center:['50%','46%'], avoidLabelOverlap:true,
+      label:{formatter:'{b}\n{d}%', color:'#42506a', fontSize:11.5, lineHeight:16},
+      labelLine:{length:8, length2:8},
+      data: order.map(s=>{
+        const r = rows.find(x=>x.stage_name===s);
+        return {name:s, value:r?r.stage_ratio_pct:0, itemStyle:{color:colors[s]}};
+      })
+    }]
+  });
+  return ch;
+}
+stageBar('chartStageQ3','Q3');
+stageBar('chartStageQ4','Q4');
+
+/* ---------- 图3 问题三总耗时分布 ---------- */
+const q3s = D.q3_stat;
+const c3 = echarts.init(document.getElementById('chartQ3Hist'));
+c3.setOption({
+  tooltip:{trigger:'axis', axisPointer:{type:'shadow'}, valueFormatter:v=>v+' 局'},
+  grid:{left:56, right:95, top:34, bottom:44},
+  xAxis:{type:'category', data:D.q3_hist.map(r=>r.bin_start+''), ...AXIS,
+         splitLine:{show:false}, axisLabel:{color:'#6b7a90', fontSize:11, formatter:'{value}s'}},
+  yAxis:{type:'value', name:'局数', nameTextStyle:{color:'#6b7a90', fontSize:11}, ...AXIS},
+  series:[{
+    type:'bar', data:D.q3_hist.map(r=>r.cnt), barWidth:'72%',
+    itemStyle:{color:'#2f5f8f', borderRadius:[3,3,0,0]},
+    markLine:{
+      symbol:'none', silent:true, label:{position:'insideEndTop', fontSize:11, color:'#42506a'},
+      data:[
+        {xAxis: Math.round((q3s.p50_total_sec - D.q3_hist[0].bin_start)/200), yAxis: 0,
+         lineStyle:{color:'#1a7f5a', type:'solid', width:1.5}, label:{formatter:'P50 '+fmt(q3s.p50_total_sec,0)+'s'}},
+        {xAxis: Math.round((q3s.p90_total_sec - D.q3_hist[0].bin_start)/200), yAxis: 0,
+         lineStyle:{color:'#b8860b', type:'solid', width:1.5}, label:{formatter:'P90 '+fmt(q3s.p90_total_sec,0)+'s'}},
+        {xAxis: Math.round((q3s.p99_total_sec - D.q3_hist[0].bin_start)/200), yAxis: 0,
+         lineStyle:{color:'#c8102e', type:'solid', width:1.5}, label:{formatter:'P99 '+fmt(q3s.p99_total_sec,0)+'s'}}
+      ]
+    }
+  }]
+});
+
+/* ---------- 图4 配对差值分布 ---------- */
+const c4 = echarts.init(document.getElementById('chartPairHist'));
+c4.setOption({
+  title:{text:'单局总耗时差（新版 − 基线，秒）', left:0, top:0,
+         textStyle:{fontSize:13, color:'#42506a', fontWeight:600}},
+  tooltip:{trigger:'axis', axisPointer:{type:'shadow'},
+           formatter:p=>{const b=p[0].dataIndex; const r=D.pair_hist[b];
+             return `${r.bin_start} ~ ${r.bin_start+20} 秒<br/>${r.cnt} 局`;}},
+  grid:{left:52, right:22, top:44, bottom:40},
+  xAxis:{type:'category', data:D.pair_hist.map(r=>r.bin_start), ...AXIS, splitLine:{show:false},
+         axisLabel:{color:'#6b7a90', fontSize:10.5, interval:2}},
+  yAxis:{type:'value', name:'局数', nameTextStyle:{color:'#6b7a90', fontSize:11}, ...AXIS},
+  series:[{
+    type:'bar', barWidth:'82%',
+    data:D.pair_hist.map(r=>({value:r.cnt,
+      itemStyle:{color: r.bin_start < 0 ? '#2f8f6f' : (r.bin_start === 0 ? '#9fb3c8' : '#c8102e'),
+                 borderRadius:[3,3,0,0]}})),
+    markLine:{symbol:'none', silent:true, data:[{xAxis:5, lineStyle:{color:'#42506a', width:1, type:'dashed'}}],
+              label:{formatter:'0', color:'#42506a', fontSize:11}}
+  }]
+});
+
+/* ---------- 表：分层配对 ---------- */
+document.getElementById('tblPair').innerHTML = `
+  <thead><tr><th>源数</th><th class="num">对数</th><th class="num">平均差（秒）</th><th class="num">新版更快占比</th></tr></thead>
+  <tbody>${D.pair_by_src.map(r=>`<tr>
+      <td>${r.src_cnt} 源</td><td class="num">${r.pair_cnt}</td>
+      <td class="num">${r.avg_delta_sec>0?'+':''}${fmt(r.avg_delta_sec,1)}</td>
+      <td class="num">${fmt(r.new_faster_pct,1)}%</td></tr>`).join('')}</tbody>`;
+
+/* ---------- 表：DQ ---------- */
+document.getElementById('tblDq').innerHTML = `
+  <thead><tr><th>编号</th><th>断言</th><th>维度</th><th class="num">检查行数</th><th class="num">失败行数</th><th class="num">通过率</th><th>状态</th></tr></thead>
+  <tbody>${D.dq.map(r=>`<tr>
+      <td style="font-family:ui-monospace,monospace;font-size:12px">${r.check_cd}</td>
+      <td>${r.check_name}</td><td style="color:#6b7a90">${r.dimension}</td>
+      <td class="num">${int(r.total_cnt)}</td><td class="num">${r.failed_cnt}</td>
+      <td class="num">${fmt(r.pass_rate_pct,2)}%</td>
+      <td><span class="tag ${r.status==='PASS'?'pass':(r.status==='WARN'?'warn':'fail')}">${r.status}</span></td></tr>`).join('')}</tbody>`;
+
+/* ---------- 说明文字 ---------- */
+const cm = D.cost_model.find(r=>r.problem_cd==='Q3');
+document.getElementById('costModelNote').innerHTML =
+  `<b>用一条 SQL 做最小二乘：</b>总耗时 ≈ <code>${int(cm.intercept_sec)}</code> 秒（截距，与源数无关）+ <code>${fmt(cm.slope_sec_per_src,2)}</code> 秒/源 × 源数，R² = <code>${fmt(cm.r_squared,4)}</code>。
+   R² 只有 ${fmt(cm.r_squared,2)}，说明源数<b>不足以</b>单独解释耗时差异——剩下的大部分波动来自每局源的空间分布与巡查路径长度，这正是后续需要补的维度，而不是模型没拟合好就该换个说法。`;
+
+const L = D.lift;
+document.getElementById('pairNote').innerHTML =
+  `<b>结论要说准：</b>${int(L.pair_cnt)} 对同场景里，新版平均多花 <code>${fmt(L.avg_total_delta_sec,1)}</code> 秒（<code>+${fmt(L.lift_total_pct,2)}%</code>），只有 <code>${fmt(L.new_faster_rate_pct,1)}%</code> 的场景更快，中位差 <code>+${fmt(L.p50_total_delta_sec,1)}</code> 秒。
+   所以「新版更快」这句话在题设误差范围内<b>不成立</b>。真正的收益在容错：兜底路径让覆盖更保守（平均覆盖点从 36.8 增至 43.3），代价是这 +${fmt(L.lift_total_pct,2)}%。`;
+
+document.getElementById('findings').innerHTML = [
+  `<b>移动是唯一真正的瓶颈。</b>问题三移动占 ${D.stage.find(s=>s.problem_cd==='Q3'&&s.stage_name==='移动')?.stage_ratio_pct}%、问题四占 ${D.stage.find(s=>s.problem_cd==='Q4'&&s.stage_name==='移动')?.stage_ratio_pct}%，清除只占 ${D.stage.find(s=>s.problem_cd==='Q3'&&s.stage_name==='定位清除')?.stage_ratio_pct}% 与 ${D.stage.find(s=>s.problem_cd==='Q4'&&s.stage_name==='定位清除')?.stage_ratio_pct}%。优化路径的收益远大于抠测量精度。`,
+  `<b>规模效应显著。</b>问题三单源耗时从 10 源的 297.8 秒降到 16 源的 208.8 秒，降幅 29.9%，来源是固定巡查成本被摊薄，而不是算法随规模变强。`,
+  `<b>均值不够，必须看尾部。</b>问题三单局总耗时 P50 ${fmt(q3s.p50_total_sec,0)} 秒、P90 ${fmt(q3s.p90_total_sec,0)} 秒、P99 ${fmt(q3s.p99_total_sec,0)} 秒，变异系数 ${fmt(q3s.cv_total*100,2)}%——波动主要来自各局源数不同，不是算法随机性。`,
+  `<b>配对实验纠正了一个直觉。</b>把「缩小一次定位的最坏直径」当成「缩短任务耗时」，在数据上不成立：闭式最优点让定位更准，但整体更慢。结论必须分开表述。`,
+  `<b>${D.dq.length} 项质量断言全通过。</b>四项动作耗时之和与总时间 0 处对不上，清除数未越界，run_id 唯一，${D.dq.length} 项检查平均通过率 ${fmt(D.scorecard.avg_pass_rate*100,2)}%。`
+].map(x=>`<li>${x}</li>`).join('');
+
+document.getElementById('dqNote').innerHTML =
+  `<b>发现的一处真实口径问题：</b>配对 CSV 里有一列叫 <code>delta_s</code>，字面看像「总时间差」，实测它等于「每源耗时差」（DQ-06 逐行核对通过）。
+   ETL 里把它重命名为 <code>src_delta_sec</code>，并另算 <code>total_delta_sec</code>——否则整个提升结论会算错一个量级。`;
+
+document.getElementById('limit').innerHTML =
+  `<b>局限要说在前面：</b>本批 1000 局问题四数据里，定向源个数与源总数近似共线（定向占比固定在 60% 附近），因此<b>无法</b>从中分离「定向源比例」的影响；
+   要做归因必须另跑变比例实验。另外这些是离线仿真日志，不是官方模拟器的正式测试记录，两者场景分布不同，不能混在一张表里比。`;
+
+document.getElementById('footMeta').textContent =
+  `数据源：1000 局问题三 + 1000 局问题四（新版/基线）+ 1000 对配对 · 生成于 ${D.generated_at}`;
+
+window.addEventListener('resize', () => {
+  [c1,c3,c4].forEach(c=>c.resize());
+  echarts.getInstanceByDom(document.getElementById('chartStageQ3'))?.resize();
+  echarts.getInstanceByDom(document.getElementById('chartStageQ4'))?.resize();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# 数据库产物（可由 pipeline 重建，不入库）
+db/*.sqlite
+db/*.sqlite-wal
+db/*.sqlite-shm
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# 系统
+.DS_Store
