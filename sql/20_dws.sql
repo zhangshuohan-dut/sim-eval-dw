@@ -205,21 +205,37 @@ ranked AS (
            COUNT(*)     OVER ()                         AS cnt
     FROM dwd_q4_paired
 ),
+-- 每源口径的分位数：论文正文报告的是每源配对差（均值 0.392 s、中位 0.651 s），
+-- 整局口径会被源数放大，两者不能混用，所以两套都算出来。
+ranked_src AS (
+    SELECT src_delta_sec AS v,
+           ROW_NUMBER() OVER (ORDER BY src_delta_sec) AS rn,
+           COUNT(*)     OVER ()                       AS cnt
+    FROM dwd_q4_paired
+),
 pct AS (
     SELECT
         ROUND(MAX(CASE WHEN rn = CAST(ROUND(cnt * 0.10) AS INTEGER) THEN v END), 3) AS p10_total_delta_sec,
         ROUND(MAX(CASE WHEN rn = CAST(ROUND(cnt * 0.50) AS INTEGER) THEN v END), 3) AS p50_total_delta_sec,
         ROUND(MAX(CASE WHEN rn = CAST(ROUND(cnt * 0.90) AS INTEGER) THEN v END), 3) AS p90_total_delta_sec
     FROM ranked
+),
+pct_src AS (
+    SELECT
+        ROUND(MAX(CASE WHEN rn = CAST(ROUND(cnt * 0.50) AS INTEGER) THEN v END), 3) AS p50_src_delta_sec
+    FROM ranked_src
 )
 SELECT
     a.*,
     p.p10_total_delta_sec,
     p.p50_total_delta_sec,
     p.p90_total_delta_sec,
-    ROUND((a.avg_new_total_sec - a.avg_base_total_sec) / NULLIF(a.avg_base_total_sec, 0), 6) AS lift_total_pct
+    ps.p50_src_delta_sec,
+    ROUND((a.avg_new_total_sec - a.avg_base_total_sec) / NULLIF(a.avg_base_total_sec, 0), 6) AS lift_total_pct,
+    ROUND(a.avg_src_delta_sec * 1.0 / NULLIF(a.avg_base_per_src_sec, 0), 6)                  AS per_src_lift_pct
 FROM agg a
-CROSS JOIN pct p;
+CROSS JOIN pct p
+CROSS JOIN pct_src ps;
 
 
 -- ---------------------------------------------------------------------

@@ -1,5 +1,5 @@
 window.DW_DATA = {
-  "generated_at": "2026-10-27 19:48",
+  "generated_at": "2026-10-27 21:30",
   "kpi": {
     "total_run_cnt": 3000,
     "total_src_cnt": 39103,
@@ -59,8 +59,8 @@ window.DW_DATA = {
       "fact_value": "0 次不变量违例 / 0 次异常中止"
     },
     {
-      "fact_name": "配对实验结论",
-      "fact_value": "1000 对同场景：新版平均 5.1 秒（0.09%），35.6% 场景更快"
+      "fact_name": "覆盖策略代价",
+      "fact_value": "1000 对同场景：19m 矩形覆盖较 20m 六角点阵每源 +0.392 秒（+0.085%），换取 1m 清除余量"
     }
   ],
   "scorecard": {
@@ -70,7 +70,7 @@ window.DW_DATA = {
     "warn_cnt": 0,
     "avg_pass_rate": 1.0,
     "pipeline_status": "READY",
-    "checked_at": "2026-10-27 19:47:29"
+    "checked_at": "2026-10-27 21:30:55"
   },
   "dq": [
     {
@@ -598,7 +598,7 @@ window.DW_DATA = {
     "unresolved_sum": 0
   },
   "lift": {
-    "comparison": "Q4 新版 vs 基线",
+    "comparison": "Q4 19m 矩形覆盖 vs 20m 六角点阵",
     "pair_cnt": 1000,
     "avg_new_total_sec": 5816.791,
     "avg_base_total_sec": 5811.675,
@@ -606,10 +606,15 @@ window.DW_DATA = {
     "lift_total_pct": 0.09,
     "new_faster_cnt": 356,
     "new_faster_rate_pct": 35.6,
+    "avg_new_per_src_sec": 459.824,
+    "avg_base_per_src_sec": 459.432,
+    "avg_src_delta_sec": 0.392,
+    "per_src_lift_pct": 0.085,
+    "p50_src_delta_sec": 0.651,
     "p10_total_delta_sec": -38.086,
     "p50_total_delta_sec": 8.01,
     "p90_total_delta_sec": 56.538,
-    "conclusion": "新版整体更慢，需要回到策略层面解释增益来源"
+    "conclusion": "1000 对同场景中，19m 矩形单元覆盖相对 20m 六角点阵每源多耗 0.392 s（+0.085%），换取 1m 清除余量；两种策略均全部清除，属数值稳健性加固，不是算法退化"
   },
   "cost_model": [
     {

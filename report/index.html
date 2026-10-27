@@ -121,8 +121,8 @@
 <p class="lead">只报均值会掩盖长尾。这里给出问题三 1000 局的单局总耗时分布，并标注 P50 / P90 / P99——评测里真正该盯的是尾部。</p>
 <div class="card"><div id="chartQ3Hist" class="chart"></div></div>
 
-<h2>五、配对实验：效率到底有没有提升<span class="en">PAIRED TEST</span></h2>
-<p class="lead">新版与基线跑的是同一批种子（750000–750999），因此可以做同场景配对，直接消掉「每局源数不同」带来的方差。</p>
+<h2>五、配对对照：覆盖策略的代价<span class="en">PAIRED TEST</span></h2>
+<p class="lead">19 m 矩形单元覆盖与名义 20 m 六角点阵跑的是同一批种子（750000–750999），同场景配对可以直接消掉「每局源数不同」带来的方差。注意两者不是算法版本关系，而是同一套策略下两种清除布点方式，评价的是「换布点值不值」。</p>
 <div class="grid2">
   <div class="card"><div id="chartPairHist" class="chart" style="height:300px"></div></div>
   <div class="card" style="padding-top:16px">
@@ -183,8 +183,8 @@ const AXIS = { axisLine:{lineStyle:{color:'#d6dde7'}}, axisLabel:{color:'#6b7a90
 const sc = D.scaling;
 const seriesMap = [
   ['Q3','final_v3','问题三 · final_v3','#1f4e79'],
-  ['Q4','new','问题四 · 新版','#2f8f6f'],
-  ['Q4','baseline','问题四 · 基线','#b7874a']
+  ['Q4','new','问题四 · 19m 矩形','#2f8f6f'],
+  ['Q4','baseline','问题四 · 20m 六角','#b7874a']
 ];
 const srcList = [...new Set(sc.map(r => r.src_cnt))].sort((a,b)=>a-b);
 const c1 = echarts.init(document.getElementById('chartScaling'));
@@ -208,7 +208,7 @@ function stageBar(id, problem){
   const colors = {'移动':'#1f4e79','测量':'#4a86b8','切频':'#a8bccf','定位清除':'#c8102e'};
   const ch = echarts.init(document.getElementById(id));
   ch.setOption({
-    title:{text: problem==='Q3'?'问题三 · final_v3':'问题四 · 新版', left:0, top:0,
+    title:{text: problem==='Q3'?'问题三 · final_v3':'问题四 · 19m 矩形', left:0, top:0,
            textStyle:{fontSize:13, color:'#42506a', fontWeight:600}},
     tooltip:{trigger:'item', formatter:p=>`${p.name}<br/>${fmt(p.value,2)} 秒（${fmt(p.percent,2)}%）`},
     legend:{bottom:0, textStyle:{color:'#42506a', fontSize:11.5}, itemWidth:12, itemHeight:8},
@@ -257,7 +257,7 @@ c3.setOption({
 /* ---------- 图4 配对差值分布 ---------- */
 const c4 = echarts.init(document.getElementById('chartPairHist'));
 c4.setOption({
-  title:{text:'单局总耗时差（新版 − 基线，秒）', left:0, top:0,
+  title:{text:'单局总耗时差（19 m 矩形 − 20 m 六角，秒）', left:0, top:0,
          textStyle:{fontSize:13, color:'#42506a', fontWeight:600}},
   tooltip:{trigger:'axis', axisPointer:{type:'shadow'},
            formatter:p=>{const b=p[0].dataIndex; const r=D.pair_hist[b];
@@ -278,7 +278,7 @@ c4.setOption({
 
 /* ---------- 表：分层配对 ---------- */
 document.getElementById('tblPair').innerHTML = `
-  <thead><tr><th>源数</th><th class="num">对数</th><th class="num">平均差（秒）</th><th class="num">新版更快占比</th></tr></thead>
+  <thead><tr><th>源数</th><th class="num">对数</th><th class="num">平均差（秒）</th><th class="num">矩形覆盖更快占比</th></tr></thead>
   <tbody>${D.pair_by_src.map(r=>`<tr>
       <td>${r.src_cnt} 源</td><td class="num">${r.pair_cnt}</td>
       <td class="num">${r.avg_delta_sec>0?'+':''}${fmt(r.avg_delta_sec,1)}</td>
@@ -302,8 +302,9 @@ document.getElementById('costModelNote').innerHTML =
 
 const L = D.lift;
 document.getElementById('pairNote').innerHTML =
-  `<b>结论要说准：</b>${int(L.pair_cnt)} 对同场景里，新版平均多花 <code>${fmt(L.avg_total_delta_sec,1)}</code> 秒（<code>+${fmt(L.lift_total_pct,2)}%</code>），只有 <code>${fmt(L.new_faster_rate_pct,1)}%</code> 的场景更快，中位差 <code>+${fmt(L.p50_total_delta_sec,1)}</code> 秒。
-   所以「新版更快」这句话在题设误差范围内<b>不成立</b>。真正的收益在容错：兜底路径让覆盖更保守（平均覆盖点从 36.8 增至 43.3），代价是这 +${fmt(L.lift_total_pct,2)}%。`;
+  `<b>结论要说准：</b>${int(L.pair_cnt)} 对同场景里，19 m 矩形覆盖相对 20 m 六角点阵 <b>每源</b>多花 <code>${fmt(L.avg_src_delta_sec,3)}</code> 秒（<code>+${fmt(L.per_src_lift_pct,3)}%</code>），中位差 <code>+${fmt(L.p50_src_delta_sec,2)}</code> 秒/源；折成整局是 <code>${fmt(L.avg_total_delta_sec,1)}</code> 秒（<code>+${fmt(L.lift_total_pct,2)}%</code>），${int(L.new_faster_cnt)} 局更快、${int(L.pair_cnt - L.new_faster_cnt)} 局更慢。
+   <br>所以「换一种覆盖方式就能更快」在题设误差范围内<b>不成立</b>。19 m 设计半径的收益不在速度，而在余量：清除判定半径是 20 m，布点退到 19 m 就留出 1 m 容错，代价就是这 +${fmt(L.per_src_lift_pct,3)}%。两种策略都是 ${int(L.pair_cnt)}/${int(L.pair_cnt)} 全部清除。
+   <br><span style="color:#6b7a90">口径提醒：这里比的是<b>覆盖布点方式</b>，不是算法版本。整局差与每源差不能混着说——整局差被源数放大，对外汇报一律用每源口径。</span>`;
 
 document.getElementById('findings').innerHTML = [
   `<b>移动是唯一真正的瓶颈。</b>问题三移动占 ${D.stage.find(s=>s.problem_cd==='Q3'&&s.stage_name==='移动')?.stage_ratio_pct}%、问题四占 ${D.stage.find(s=>s.problem_cd==='Q4'&&s.stage_name==='移动')?.stage_ratio_pct}%，清除只占 ${D.stage.find(s=>s.problem_cd==='Q3'&&s.stage_name==='定位清除')?.stage_ratio_pct}% 与 ${D.stage.find(s=>s.problem_cd==='Q4'&&s.stage_name==='定位清除')?.stage_ratio_pct}%。优化路径的收益远大于抠测量精度。`,
@@ -322,7 +323,7 @@ document.getElementById('limit').innerHTML =
    要做归因必须另跑变比例实验。另外这些是离线仿真日志，不是官方模拟器的正式测试记录，两者场景分布不同，不能混在一张表里比。`;
 
 document.getElementById('footMeta').textContent =
-  `数据源：1000 局问题三 + 1000 局问题四（新版/基线）+ 1000 对配对 · 生成于 ${D.generated_at}`;
+  `数据源：1000 局问题三 + 1000 局问题四（19m 矩形 / 20m 六角）+ 1000 对配对 · 生成于 ${D.generated_at}`;
 
 window.addEventListener('resize', () => {
   [c1,c3,c4].forEach(c=>c.resize());

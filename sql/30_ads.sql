@@ -54,7 +54,7 @@ SELECT
 DROP TABLE IF EXISTS ads_algo_lift;
 CREATE TABLE ads_algo_lift AS
 SELECT
-    'Q4 新版 vs 基线'                                   AS comparison,
+    'Q4 19m 矩形覆盖 vs 20m 六角点阵'                     AS comparison,
     pair_cnt,
     avg_new_total_sec,
     avg_base_total_sec,
@@ -62,12 +62,20 @@ SELECT
     ROUND(lift_total_pct * 100, 2)                      AS lift_total_pct,
     new_faster_cnt,
     ROUND(new_faster_rate * 100, 2)                     AS new_faster_rate_pct,
+    -- 每源口径：论文正文报告的就是这一套（均值差、相对变化、中位差）
+    avg_new_per_src_sec,
+    avg_base_per_src_sec,
+    avg_src_delta_sec,
+    ROUND(per_src_lift_pct * 100, 3)                    AS per_src_lift_pct,
+    p50_src_delta_sec,
     p10_total_delta_sec,
     p50_total_delta_sec,
     p90_total_delta_sec,
-    CASE WHEN avg_total_delta_sec < 0
-         THEN '新版整体更快，且同场景配对消除了源数差异带来的方差'
-         ELSE '新版整体更慢，需要回到策略层面解释增益来源' END AS conclusion
+    -- 定性说明：这是覆盖策略的代价对照，不是算法版本优劣；
+    -- 两者设计半径不同（19 m vs 名义 20 m），差值是买 1 m 清除余量的钱。
+    printf('%d 对同场景中，19m 矩形单元覆盖相对 20m 六角点阵每源多耗 %.3f s（+%.3f%%），换取 1m 清除余量；'
+           || '两种策略均全部清除，属数值稳健性加固，不是算法退化',
+           pair_cnt, avg_src_delta_sec, per_src_lift_pct * 100) AS conclusion
 FROM dws_q4_paired_stat;
 
 
@@ -160,4 +168,6 @@ SELECT '程序运行峰值', CAST(max_wall_sec AS TEXT) || ' 秒（上限 1200 �
 UNION ALL
 SELECT '稳定性', CAST(total_viol_cnt AS TEXT) || ' 次不变量违例 / ' || CAST(total_aborted_cnt AS TEXT) || ' 次异常中止' FROM ads_kpi_overview
 UNION ALL
-SELECT '配对实验结论', CAST(pair_cnt AS TEXT) || ' 对同场景：新版平均 ' || CAST(ROUND(avg_total_delta_sec, 1) AS TEXT) || ' 秒（' || CAST(ROUND(lift_total_pct * 100, 2) AS TEXT) || '%），' || CAST(ROUND(new_faster_rate * 100, 1) AS TEXT) || '% 场景更快' FROM dws_q4_paired_stat;
+SELECT '覆盖策略代价', CAST(pair_cnt AS TEXT) || ' 对同场景：19m 矩形覆盖较 20m 六角点阵每源 +'
+       || printf('%.3f', avg_src_delta_sec) || ' 秒（+' || printf('%.3f', per_src_lift_pct * 100)
+       || '%），换取 1m 清除余量' FROM dws_q4_paired_stat;
